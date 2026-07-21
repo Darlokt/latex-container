@@ -1,3 +1,4 @@
+asymptote
 bash
 bash-completion
 build-essential
