@@ -142,11 +142,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Reclaim runner disk space
-        env:
-          MINIMUM_FREE_GB: "35"
-        run: .github/scripts/free-disk-space.sh
-
       - name: Log in to GHCR
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:

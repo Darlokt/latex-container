@@ -145,10 +145,9 @@ cannot recreate an earlier network installation. Pin document repositories to
 an immutable image digest. Every image records Debian, TeX Live, npm, Python,
 and R inventories under `/usr/local/share/latex-container/`.
 
-Both `linux/amd64` and `linux/arm64` are published. Standard GitHub-hosted
-runners have tight disk limits, so CI performs allowlisted cleanup and a free
-space check. Use larger or self-hosted native runners with at least 50 GB free
-if that cleanup stops being sufficient.
+Both `linux/amd64` and `linux/arm64` are published. The native runners used for
+these builds must provide enough free disk space for the complete TeX Live
+installation and Docker build cache.
 
 Publishing never runs on a branch push or schedule. Use the **Build and publish
 image** workflow with an explicit unused tag, or publish a GitHub Release tagged
