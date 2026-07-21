@@ -1,0 +1,30 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{imakeidx}
+\usepackage{minted}
+\usepackage{pgfplots}
+\usepackage[acronym,xindy]{glossaries}
+\pgfplotsset{compat=1.18}
+\makeindex
+\makeglossaries
+\newglossaryentry{latex}{name=LaTeX,description={A document preparation system}}
+\begin{document}
+\gls{latex}\index{LaTeX}
+
+\begin{minted}{python}
+print("reproducible")
+\end{minted}
+
+\begin{tikzpicture}
+\begin{axis}[width=6cm]
+\addplot coordinates {(0,0) (1,1) (2,4)};
+\end{axis}
+\end{tikzpicture}
+
+\includegraphics[width=.3\linewidth]{build/mermaid.pdf}
+\includegraphics[width=.3\linewidth]{build/graphviz.png}
+\includegraphics[width=.3\linewidth]{build/plantuml.png}
+
+\printglossaries
+\printindex
+\end{document}

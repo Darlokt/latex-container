@@ -1,0 +1,89 @@
+name: Pull request CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Static validation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate Dockerfile
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        with:
+          dockerfile: Dockerfile
+          config: .hadolint.yaml
+
+      - name: Validate shell and repository files
+        run: |
+          shellcheck scripts/* tests/smoke/* .github/scripts/*.sh
+          .github/scripts/validate-repository.sh
+          docker build --check .
+
+      - name: Validate GitHub Actions syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+
+      - name: Set up Node.js for repository linting
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+          cache: npm
+
+      - name: Install locked Node tools
+        run: |
+          npm install --global npm@12.0.1
+          npm ci --ignore-scripts
+
+      - name: Lint Markdown
+        run: |
+          npx markdownlint --ignore node_modules '**/*.md'
+
+  image-test:
+    name: Build and smoke test amd64
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Reclaim runner disk space
+        env:
+          MINIMUM_FREE_GB: "35"
+        run: .github/scripts/free-disk-space.sh
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Derive image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build smoke-test stage
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          build-args: |
+            BUILD_DATE=pr
+            TEXLIVE_SNAPSHOT=pr-${{ hashFiles('texlive.profile', 'packages/debian.txt', 'package-lock.json') }}
+            VCS_REF=${{ github.event.pull_request.head.sha }}
+            VERSION=pr-${{ github.event.pull_request.number }}
+          cache-from: |
+            type=registry,ref=${{ steps.image.outputs.name }}:buildcache-amd64
+            type=gha,scope=pr-amd64
+          cache-to: type=gha,mode=min,scope=pr-amd64
+          context: .
+          platforms: linux/amd64
+          provenance: false
+          push: false
+          sbom: false
+          target: test

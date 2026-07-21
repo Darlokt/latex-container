@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_file="${MERMAID_PUPPETEER_CONFIG:-/etc/mermaid/puppeteer.json}"
+
+exec /usr/local/bin/mmdc-real --puppeteerConfigFile "${config_file}" "$@"

@@ -1,0 +1,8 @@
+@startuml
+actor Author
+participant "VS Code" as VSCode
+participant "LaTeX Workshop" as Workshop
+Author -> VSCode: Save manuscript
+VSCode -> Workshop: Build
+Workshop --> Author: Preview PDF
+@enduml

@@ -1,0 +1,6 @@
+node_modules/
+tests/fixtures/build/
+*.log
+*.synctex.gz
+*.fls
+*.fdb_latexmk

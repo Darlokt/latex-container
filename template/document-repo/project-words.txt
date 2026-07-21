@@ -1,0 +1,1 @@
+# Add project-specific terminology here, one word per line.

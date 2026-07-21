@@ -1,0 +1,7 @@
+.git
+.github
+node_modules
+rough_plan.md
+template
+tests/fixtures/build
+*.log

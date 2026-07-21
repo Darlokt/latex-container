@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fixture_dir="$(pwd)"
+build_dir="${fixture_dir}/build"
+mkdir -p "${build_dir}"
+
+assert_file() {
+  local path="$1"
+  if [[ ! -s "${path}" ]]; then
+    printf 'Expected non-empty file: %s\n' "${path}" >&2
+    exit 1
+  fi
+}
+
+printf '%s\n' 'Rendering diagram formats'
+mmdc --input diagrams/flowchart.mmd --output "${build_dir}/mermaid.svg"
+mmdc --input diagrams/flowchart.mmd --output "${build_dir}/mermaid.png"
+mmdc --input diagrams/flowchart.mmd --output "${build_dir}/mermaid.pdf"
+dot -Tsvg diagrams/graph.dot -o "${build_dir}/graphviz.svg"
+dot -Tpng diagrams/graph.dot -o "${build_dir}/graphviz.png"
+dot -Tpdf diagrams/graph.dot -o "${build_dir}/graphviz.pdf"
+cp diagrams/plantuml.puml "${build_dir}/plantuml.puml"
+(cd "${build_dir}" && plantuml -tsvg plantuml.puml && plantuml -tpng plantuml.puml)
+gnuplot -e "output='${build_dir}/gnuplot.pdf'" diagrams/plot.gnuplot
+rsvg-convert --format=pdf --output="${build_dir}/rsvg.pdf" "${build_dir}/mermaid.svg"
+inkscape "${build_dir}/mermaid.svg" --export-type=pdf --export-filename="${build_dir}/inkscape.pdf"
+asy -f pdf -o "${build_dir}/asymptote.pdf" diagrams/asymptote.asy
+
+for artifact in \
+  mermaid.svg mermaid.png mermaid.pdf \
+  graphviz.svg graphviz.png graphviz.pdf \
+  plantuml.svg plantuml.png gnuplot.pdf rsvg.pdf inkscape.pdf asymptote.pdf; do
+  assert_file "${build_dir}/${artifact}"
+done
+
+printf '%s\n' 'Compiling LaTeX engines and bibliography workflows'
+latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/pdflatex" tex/pdflatex.tex
+latexmk -lualatex -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/lualatex" tex/unicode.tex
+latexmk -xelatex -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/xelatex" tex/unicode.tex
+latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/bibtex" tex/bibtex.tex
+latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/biblatex" tex/biblatex.tex
+
+printf '%s\n' 'Compiling generated figures, indexes, glossaries, and executable TeX tools'
+latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/complex" tex/complex.tex
+makeglossaries -d "${build_dir}/complex" complex
+makeindex "${build_dir}/complex/complex.idx" \
+  -o "${build_dir}/complex/complex.ind"
+latexmk -g -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/complex" tex/complex.tex
+latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/svg" tex/svg.tex
+latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
+  -outdir="${build_dir}/gnuplottex" tex/gnuplottex.tex
+
+mkdir -p "${build_dir}/pythontex"
+cp tex/pythontex.tex "${build_dir}/pythontex/"
+(
+  cd "${build_dir}/pythontex"
+  pdflatex -shell-escape -interaction=nonstopmode -halt-on-error pythontex.tex
+  pythontex pythontex.tex
+  pdflatex -shell-escape -interaction=nonstopmode -halt-on-error pythontex.tex
+)
+
+mkdir -p "${build_dir}/arara"
+cp tex/arara.tex "${build_dir}/arara/"
+(cd "${build_dir}/arara" && arara arara.tex)
+
+printf '%s\n' 'Compiling Markdown and R Markdown'
+pandoc markdown/paper.md \
+  --bibliography=references.bib \
+  --citeproc \
+  --pdf-engine=lualatex \
+  --output="${build_dir}/pandoc.pdf"
+Rscript -e "rmarkdown::render('rmarkdown/report.Rmd', output_file='report.pdf', output_dir='${build_dir}', quiet=TRUE)"
+
+printf '%s\n' 'Checking authoring utilities'
+prek --version
+latexindent tex/pdflatex.tex >/dev/null
+latexdiff tex/diff-old.tex tex/diff-new.tex > "${build_dir}/diff.tex"
+chktex -q tex/pdflatex.tex
+
+find "${build_dir}" -type f -name '*.pdf' -print0 | while IFS= read -r -d '' pdf; do
+  assert_file "${pdf}"
+  qpdf --check "${pdf}"
+  pdfinfo "${pdf}" >/dev/null
+  pdffonts "${pdf}" >/dev/null
+done
+
+test -w "${fixture_dir}"
+printf '%s\n' 'All smoke tests passed'

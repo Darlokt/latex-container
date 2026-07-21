@@ -1,0 +1,6 @@
+digraph authoring {
+  rankdir=LR;
+  data -> analysis;
+  analysis -> figure;
+  figure -> manuscript;
+}

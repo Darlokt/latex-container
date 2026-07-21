@@ -1,0 +1,9 @@
+---
+title: "Reproducible R Markdown"
+output: pdf_document
+---
+
+```{r}
+summary(cars)
+plot(cars)
+```

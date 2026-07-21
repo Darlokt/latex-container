@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+required_commands=(
+  R
+  Rscript
+  arara
+  asy
+  biber
+  bibtex
+  chktex
+  chromium
+  dot
+  fc-list
+  gfortran
+  gnuplot
+  gs
+  inkscape
+  java
+  latex
+  latexdiff
+  latexindent
+  latexmk
+  lualatex
+  make
+  makeglossaries
+  makeindex
+  mmdc
+  node
+  pandoc
+  pdffonts
+  pdfinfo
+  pdflatex
+  plantuml
+  prek
+  pygmentize
+  python3
+  qpdf
+  rsvg-convert
+  tex
+  texcount
+  texdoc
+  xelatex
+  xindy
+)
+
+missing=0
+for command_name in "${required_commands[@]}"; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf 'Missing command: %s\n' "${command_name}" >&2
+    missing=1
+  fi
+done
+
+if ((missing != 0)); then
+  exit 1
+fi
+
+perl -MFile::HomeDir -MYAML::Tiny -MUnicode::GCString -e 1
+python3 -c 'import pygments'
+Rscript -e 'stopifnot(requireNamespace("knitr", quietly=TRUE), requireNamespace("rmarkdown", quietly=TRUE))'
+test -r /usr/local/share/latex-container/build-info.json
+test -r /usr/local/share/latex-container/debian-packages.tsv
+test -r /usr/local/share/latex-container/texlive-packages.txt
+[[ "$(node --version)" == v24.* ]]
+[[ "$(npm --version)" == 12.* ]]
+
+printf '%s\n' 'LaTeX environment OK'
+latex --version | sed -n '1p'
+latexmk -version | sed -n '1p'
+biber --version | sed -n '1p'
+pandoc --version | sed -n '1p'
+mmdc --version
+prek --version
+node --version
+npm --version
+python3 --version
+R --version | sed -n '1p'
