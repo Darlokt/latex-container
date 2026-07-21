@@ -56,6 +56,11 @@ if ((missing != 0)); then
   exit 1
 fi
 
+if [[ "$(command -v mmdc)" != /usr/local/bin/mmdc ]]; then
+  printf 'Mermaid wrapper is shadowed by: %s\n' "$(command -v mmdc)" >&2
+  exit 1
+fi
+
 perl -MFile::HomeDir -MYAML::Tiny -MUnicode::GCString -e 1
 python3 -c 'import pygments'
 Rscript -e 'stopifnot(requireNamespace("knitr", quietly=TRUE), requireNamespace("rmarkdown", quietly=TRUE))'
