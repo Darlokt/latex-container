@@ -25,7 +25,7 @@ cp diagrams/plantuml.puml "${build_dir}/plantuml.puml"
 gnuplot -e "output='${build_dir}/gnuplot.pdf'" diagrams/plot.gnuplot
 rsvg-convert --format=pdf --output="${build_dir}/rsvg.pdf" "${build_dir}/mermaid.svg"
 inkscape "${build_dir}/mermaid.svg" --export-type=pdf --export-filename="${build_dir}/inkscape.pdf"
-asy -f pdf -o "${build_dir}/asymptote.pdf" diagrams/asymptote.asy
+asy -f pdf -o "${build_dir}/asymptote" diagrams/asymptote.asy
 
 for artifact in \
   mermaid.svg mermaid.png mermaid.pdf \
