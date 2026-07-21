@@ -50,8 +50,7 @@ printf '%s\n' 'Compiling generated figures, indexes, glossaries, and executable 
 latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
   -outdir="${build_dir}/complex" tex/complex.tex
 makeglossaries -d "${build_dir}/complex" complex
-makeindex "${build_dir}/complex/complex.idx" \
-  -o "${build_dir}/complex/complex.ind"
+(cd "${build_dir}/complex" && makeindex complex.idx -o complex.ind)
 latexmk -g -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
   -outdir="${build_dir}/complex" tex/complex.tex
 latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
