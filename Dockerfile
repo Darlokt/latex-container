@@ -82,32 +82,59 @@ COPY texlive.profile /tmp/texlive.profile
 RUN set -eux; \
     printf 'Installing TeX Live snapshot %s\n' "${TEXLIVE_SNAPSHOT}"; \
     install -d /tmp/install-tl; \
-    for attempt in 1 2 3; do \
-      CHECKSUM_URL="$(curl --fail --location --show-error --silent \
+    MIRROR_READY=false; \
+    for attempt in 1 2 3 4 5; do \
+      if ! CHECKSUM_URL="$(curl --connect-timeout 15 --max-time 60 \
+        --fail --location --show-error --silent \
         --output /tmp/install-tl.tar.gz.sha512 \
         --write-out '%{url_effective}' \
-        "${TEXLIVE_REPOSITORY}/install-tl-unx.tar.gz.sha512")"; \
+        "${TEXLIVE_REPOSITORY}/install-tl-unx.tar.gz.sha512")"; then \
+        printf 'TeX Live mirror attempt %s: checksum download failed.\n' "${attempt}" >&2; \
+        continue; \
+      fi; \
       case "${CHECKSUM_URL}" in \
-        *.sha512) ARCHIVE_URL="${CHECKSUM_URL%.sha512}" ;; \
-        *) printf 'Unexpected TeX Live checksum URL: %s\n' "${CHECKSUM_URL}" >&2; exit 1 ;; \
+        *.sha512) \
+          ARCHIVE_URL="${CHECKSUM_URL%.sha512}"; \
+          RESOLVED_TEXLIVE_REPOSITORY="${ARCHIVE_URL%/install-tl-unx.tar.gz}" \
+          ;; \
+        *) \
+          printf 'TeX Live mirror attempt %s: unexpected checksum URL: %s\n' \
+            "${attempt}" "${CHECKSUM_URL}" >&2; \
+          continue \
+          ;; \
       esac; \
-      curl --fail --location --show-error --silent \
+      if ! curl --connect-timeout 15 --max-time 120 \
+        --fail --location --show-error --silent \
         "${ARCHIVE_URL}" \
-        --output /tmp/install-tl.tar.gz; \
+        --output /tmp/install-tl.tar.gz; then \
+        printf 'TeX Live mirror attempt %s: installer download failed.\n' "${attempt}" >&2; \
+        continue; \
+      fi; \
       sed -i 's#\([ *]\)install-tl-unx.tar.gz$#\1/tmp/install-tl.tar.gz#' /tmp/install-tl.tar.gz.sha512; \
-      if sha512sum --check /tmp/install-tl.tar.gz.sha512; then \
-        break; \
+      if ! sha512sum --check /tmp/install-tl.tar.gz.sha512; then \
+        printf 'TeX Live mirror attempt %s: installer checksum failed.\n' "${attempt}" >&2; \
+        continue; \
       fi; \
-      if [ "${attempt}" -eq 3 ]; then \
-        printf '%s\n' 'TeX Live installer checksum failed after 3 attempts.' >&2; \
-        exit 1; \
+      if ! curl --connect-timeout 15 --max-time 60 \
+        --fail --head --location --show-error --silent \
+        --output /dev/null \
+        "${RESOLVED_TEXLIVE_REPOSITORY}/tlpkg/texlive.tlpdb"; then \
+        printf 'TeX Live mirror attempt %s: package database is unavailable.\n' "${attempt}" >&2; \
+        continue; \
       fi; \
+      MIRROR_READY=true; \
+      break; \
     done; \
+    if [ "${MIRROR_READY}" != true ]; then \
+      printf '%s\n' 'No consistent and reachable TeX Live mirror found after 5 attempts.' >&2; \
+      exit 1; \
+    fi; \
     tar --extract --gzip --file=/tmp/install-tl.tar.gz --directory=/tmp/install-tl --strip-components=1; \
     TL_PLATFORM="$(/tmp/install-tl/install-tl --print-platform)"; \
+    printf 'Using TeX Live repository %s\n' "${RESOLVED_TEXLIVE_REPOSITORY}"; \
     /tmp/install-tl/install-tl \
       --profile=/tmp/texlive.profile \
-      --repository="${TEXLIVE_REPOSITORY}" \
+      --repository="${RESOLVED_TEXLIVE_REPOSITORY}" \
       --strict; \
     ln -s "/usr/local/texlive/${TEXLIVE_YEAR}/bin/${TL_PLATFORM}" /usr/local/texlive/bin; \
     printf '%s\n' "${TL_PLATFORM}" > /usr/local/texlive/platform; \
