@@ -82,14 +82,27 @@ COPY texlive.profile /tmp/texlive.profile
 RUN set -eux; \
     printf 'Installing TeX Live snapshot %s\n' "${TEXLIVE_SNAPSHOT}"; \
     install -d /tmp/install-tl; \
-    curl --fail --location --show-error --silent \
-      "${TEXLIVE_REPOSITORY}/install-tl-unx.tar.gz" \
-      --output /tmp/install-tl.tar.gz; \
-    curl --fail --location --show-error --silent \
-      "${TEXLIVE_REPOSITORY}/install-tl-unx.tar.gz.sha512" \
-      --output /tmp/install-tl.tar.gz.sha512; \
-    sed -i 's#\([ *]\)install-tl-unx.tar.gz$#\1/tmp/install-tl.tar.gz#' /tmp/install-tl.tar.gz.sha512; \
-    sha512sum --check /tmp/install-tl.tar.gz.sha512; \
+    for attempt in 1 2 3; do \
+      CHECKSUM_URL="$(curl --fail --location --show-error --silent \
+        --output /tmp/install-tl.tar.gz.sha512 \
+        --write-out '%{url_effective}' \
+        "${TEXLIVE_REPOSITORY}/install-tl-unx.tar.gz.sha512")"; \
+      case "${CHECKSUM_URL}" in \
+        *.sha512) ARCHIVE_URL="${CHECKSUM_URL%.sha512}" ;; \
+        *) printf 'Unexpected TeX Live checksum URL: %s\n' "${CHECKSUM_URL}" >&2; exit 1 ;; \
+      esac; \
+      curl --fail --location --show-error --silent \
+        "${ARCHIVE_URL}" \
+        --output /tmp/install-tl.tar.gz; \
+      sed -i 's#\([ *]\)install-tl-unx.tar.gz$#\1/tmp/install-tl.tar.gz#' /tmp/install-tl.tar.gz.sha512; \
+      if sha512sum --check /tmp/install-tl.tar.gz.sha512; then \
+        break; \
+      fi; \
+      if [ "${attempt}" -eq 3 ]; then \
+        printf '%s\n' 'TeX Live installer checksum failed after 3 attempts.' >&2; \
+        exit 1; \
+      fi; \
+    done; \
     tar --extract --gzip --file=/tmp/install-tl.tar.gz --directory=/tmp/install-tl --strip-components=1; \
     TL_PLATFORM="$(/tmp/install-tl/install-tl --print-platform)"; \
     /tmp/install-tl/install-tl \
