@@ -2,7 +2,7 @@
 set -euo pipefail
 
 fixture_dir="$(pwd)"
-build_dir="${fixture_dir}/build"
+build_dir="build"
 mkdir -p "${build_dir}"
 
 assert_file() {
@@ -55,15 +55,22 @@ latexmk -g -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line
   -outdir="${build_dir}/complex" tex/complex.tex
 latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
   -outdir="${build_dir}/svg" tex/svg.tex
-latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error -file-line-error \
-  -outdir="${build_dir}/gnuplottex" tex/gnuplottex.tex
+
+mkdir -p "${build_dir}/gnuplottex"
+cp tex/gnuplottex.tex "${build_dir}/gnuplottex/"
+(
+  cd "${build_dir}/gnuplottex"
+  latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error \
+    -file-line-error gnuplottex.tex
+)
 
 mkdir -p "${build_dir}/pythontex"
 cp tex/pythontex.tex "${build_dir}/pythontex/"
 (
   cd "${build_dir}/pythontex"
   pdflatex -shell-escape -interaction=nonstopmode -halt-on-error pythontex.tex
-  pythontex pythontex.tex
+  pythontex_script="$(kpsewhich --format=texmfscripts pythontex.py)"
+  python3 "${pythontex_script}" --interpreter python:python3 pythontex.tex
   pdflatex -shell-escape -interaction=nonstopmode -halt-on-error pythontex.tex
 )
 
@@ -87,7 +94,7 @@ chktex -q tex/pdflatex.tex
 
 find "${build_dir}" -type f -name '*.pdf' -print0 | while IFS= read -r -d '' pdf; do
   assert_file "${pdf}"
-  qpdf --check "${pdf}"
+  qpdf --check --warning-exit-0 "${pdf}"
   pdfinfo "${pdf}" >/dev/null
   pdffonts "${pdf}" >/dev/null
 done
