@@ -6,24 +6,27 @@ LaTeX and Markdown documents in VS Code. It combines full upstream TeX Live
 inspection tools, and scientific/medical writing assistance.
 
 The image is intentionally large. TeX Live's full scheme alone occupies about
-9.4 GB before the scientific, browser, and authoring layers are added. Pull an
-immutable release once and reuse it across document repositories.
+9.4 GB before the scientific, browser, and authoring layers are added. Pull it
+once and reuse it across document repositories.
 
 ## Use it in a document repository
 
 Copy [`template/document-repo/.devcontainer/devcontainer.json`](template/document-repo/.devcontainer/devcontainer.json)
-to `.devcontainer/devcontainer.json` in the paper, thesis, or report repository.
-Replace `OWNER` and the digest with values from the published GHCR package:
+to `.devcontainer/devcontainer.json` in the paper, thesis, or report repository:
 
 ```json
 {
   "name": "LaTeX document",
-  "image": "ghcr.io/OWNER/latex-container:tl2026-debian13-r1@sha256:REPLACE_WITH_PUBLISHED_DIGEST",
+  "image": "ghcr.io/darlokt/latex-container:tl2026",
   "remoteUser": "vscode",
   "updateRemoteUserUID": true,
   "init": true
 }
 ```
+
+The `tl2026` alias follows the newest stable TeX Live 2026 release. For fully
+reproducible builds, replace it with an immutable release tag and digest from
+the published GHCR package.
 
 Open that repository in VS Code and choose **Dev Containers: Reopen in
 Container**. VS Code bind-mounts the repository automatically, normally under

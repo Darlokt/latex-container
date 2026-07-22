@@ -1,6 +1,6 @@
 {
   "name": "LaTeX document",
-  "image": "ghcr.io/OWNER/latex-container:tl2026-debian13-r1@sha256:REPLACE_WITH_PUBLISHED_DIGEST",
+  "image": "ghcr.io/darlokt/latex-container:tl2026",
   "remoteUser": "vscode",
   "updateRemoteUserUID": true,
   "init": true
