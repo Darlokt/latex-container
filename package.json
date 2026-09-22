@@ -9,7 +9,7 @@
     "node": "24.x"
   },
   "dependencies": {
-    "@j178/prek": "0.4.10",
+    "@j178/prek": "0.5.3",
     "@mermaid-js/mermaid-cli": "11.16.0"
   },
   "devDependencies": {
